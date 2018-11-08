@@ -24,7 +24,8 @@ spec:
         - name: twitter-feed
           containerPort: 8080
           protocol: TCP
-          volumeMounts:
+ 
+     volumeMounts:
             - name: podinfo
               mountPath: /tmp
               readOnly: false
@@ -33,8 +34,9 @@ spec:
           downwardAPI:
             items:
             - path: "labels"
-              fieldRef:
-                fieldPath: metadata.labels
+             fieldRef:
+            fieldPath: metadata.labels
+            
       imagePullSecrets:
         - name: $OKE_IMAGESECRET
 ---
