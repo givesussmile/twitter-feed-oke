@@ -1,56 +1,40 @@
-apiVersion: extensions/v1beta1
-kind: Deployment
-metadata:
-  name: twitter-feed-v1
-  labels:
-    commit: ${WERCKER_GIT_COMMIT}
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: twitter-feed
-  template:
-    metadata:
-      labels:
-        app: twitter-feed
-        commit: ${WERCKER_GIT_COMMIT}
-        color: blue
-    spec:
-      containers:
-      - name: twitter-feed
-        image: $DOCKER_REPO:$WERCKER_GIT_COMMIT
-        imagePullPolicy: Always
-        ports:
-        - name: twitter-feed
-          containerPort: 8080
-          protocol: TCP
-        volumeMounts:
-          - name: podinfo
-            mountPath: /tmp
-            readOnly: false
-      volumes:
-        - name: podinfo
-          downwardAPI:
-            items:
-            - path: "labels"
-              fieldRef:
-                fieldPath: metadata.labels
-      imagePullSecrets:
-        - name: $OKE_IMAGESECRET
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: twitter-feed
-  labels:
-    app: twitter-feed
-    commit: ${WERCKER_GIT_COMMIT}
-spec:
-  ports:
-  - port: 30000
-    targetPort: 8080
-  selector:
-    app: twitter-feed
-    color: blue
-  type: ClusterIP
----
+#Deploy our container from the Oracle Container Registry to the Oracle Container Engine (Kubernetes)
+deploy-to-cluster:
+    box:
+        id: alpine
+        cmd: /bin/sh
+    steps:
+
+    - bash-template
+
+    - script:
+        name: "Visualise Kubernetes config"
+        code: cat kubernetes.yml
+
+    - kubectl:
+        name: apply namespace    
+        server: $KUBERNETES_MASTER
+        token: $KUBERNETES_TOKEN
+        insecure-skip-tls-verify: true
+        command: apply -f ./ns.yml
+
+    - kubectl:
+        name: delete OCR secret
+        server: $KUBERNETES_MASTER
+        token: $KUBERNETES_TOKEN
+        insecure-skip-tls-verify: true
+        command: delete secret okeworkshop --namespace=$NS --ignore-not-found=true
+
+    - kubectl:
+        name: create OCR secret
+        server: $KUBERNETES_SERVER
+        token: $KUBERNETES_TOKEN
+        insecure-skip-tls-verify: true
+        command: create secret docker-registry okeworkshop --docker-server=$DOCKER_REGISTRY --docker-username=$DOCKER_USERNAME --docker-password="$DOCKER_PASSWORD" --docker-email=${WERCKER_APPLICATION+OWNER_NAME}@mail.com --namespace="$NS"
+
+    - kubectl:
+        name: deploy to kubernetes
+        server: $KUBERNETES_MASTER
+        token: $KUBERNETES_TOKEN
+        insecure-skip-tls-verify: true
+        command: apply -f ./kubernetes.yml --namespace=$NS
