@@ -9,9 +9,7 @@ spec:
   selector:
     matchLabels:
       app: twitter-feed
-  template:
-  
-  
+  template: 
     metadata:
       labels:
         app: twitter-feed
